@@ -9,23 +9,30 @@ import { Link } from './link'
 import { isLanguageSupported } from '@/features/constants/settings'
 
 export const Introduction = () => {
+  // homeStoreからshowIntroductionの状態を取得
   const showIntroduction = homeStore((s) => s.showIntroduction)
+  // settingsStoreからselectLanguageの状態を取得
   const selectLanguage = settingsStore((s) => s.selectLanguage)
 
+  // displayIntroductionとopenedの状態を管理するためのuseStateフック
   const [displayIntroduction, setDisplayIntroduction] = useState(false)
   const [opened, setOpened] = useState(true)
 
+  // useTranslationフックを使用して翻訳機能を利用
   const { t } = useTranslation()
 
+  // showIntroductionの状態が変更されたときにdisplayIntroductionを更新
   useEffect(() => {
     setDisplayIntroduction(homeStore.getState().showIntroduction)
   }, [showIntroduction])
 
+  // 言語を更新する関数
   const updateLanguage = () => {
     console.log('i18n.language', i18n.language)
 
     let languageCode = i18n.language
 
+    // 言語がサポートされているか確認し、settingsStoreのselectLanguageを更新
     settingsStore.setState({
       selectLanguage: isLanguageSupported(languageCode) ? languageCode : 'ja',
     })
