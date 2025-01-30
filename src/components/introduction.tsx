@@ -41,6 +41,7 @@ export const Introduction = () => {
   return displayIntroduction && opened ? (
     <div className="absolute z-40 w-full h-full px-24 py-40 bg-black/30 font-M_PLUS_2">
       <div className="relative mx-auto my-auto max-w-3xl max-h-full p-24 overflow-auto bg-white rounded-16">
+        {/* 閉じるボタン */}
         <IconButton
           iconName="24/Close"
           isProcessing={false}
@@ -50,14 +51,18 @@ export const Introduction = () => {
           }}
           className="absolute top-8 right-8 bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled text-white"
         ></IconButton>
+
+        {/* アプリケーションについてのセクション */}
         <div className="my-24">
-          <div className="my-8 font-bold typography-20 text-secondary ">
+          <div className="my-8 font-bold typography-20 text-secondary">
             {t('AboutThisApplication')}
           </div>
           <div>
             <Trans i18nKey="AboutThisApplicationDescription" />
           </div>
         </div>
+
+        {/* 技術紹介のセクション */}
         <div className="my-24">
           <div className="my-8 font-bold typography-20 text-secondary">
             {t('TechnologyIntroduction')}
@@ -113,6 +118,7 @@ export const Introduction = () => {
           <div className="my-16">{t('SourceCodeDescription2')}</div>
         </div>
 
+        {/* 次回表示しないチェックボックス */}
         <div className="my-24">
           <label className="flex items-center">
             <input
@@ -130,6 +136,7 @@ export const Introduction = () => {
           </label>
         </div>
 
+        {/* 閉じるボタン */}
         <div className="my-24">
           <button
             onClick={() => {
@@ -142,6 +149,7 @@ export const Introduction = () => {
           </button>
         </div>
 
+        {/* 言語が日本語の場合のメッセージ */}
         {selectLanguage === 'ja' && (
           <div className="my-24">
             <p>
