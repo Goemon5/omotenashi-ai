@@ -1,4 +1,5 @@
 import { Form } from '@/components/form'
+import React, { useState } from 'react'
 import MessageReceiver from '@/components/messageReceiver'
 import { Introduction } from '@/components/introduction'
 import { Menu } from '@/components/menu'
@@ -13,6 +14,7 @@ import settingsStore from '@/features/stores/settings'
 import '@/lib/i18n'
 import { buildUrl } from '@/utils/buildUrl'
 import { YoutubeManager } from '@/components/youtubeManager'
+import { StartSetting } from '@/components/Modal'
 
 const Home = () => {
   const webcamStatus = homeStore((s) => s.webcamStatus)
@@ -29,9 +31,12 @@ const Home = () => {
   return (
     <div className="h-[100svh] bg-cover" style={{ backgroundImage: bgUrl }}>
       <Meta />
-      <Introduction />
+      <StartSetting />
       {modelType === 'vrm' ? <VrmViewer /> : <Live2DViewer />}
       <Form />
+
+      {/* 会話操作モーダル */}
+
       <Menu />
       <ModalImage />
       {messageReceiverEnabled && <MessageReceiver />}
