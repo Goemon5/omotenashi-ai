@@ -14,7 +14,7 @@ import settingsStore from '@/features/stores/settings'
 import '@/lib/i18n'
 import { buildUrl } from '@/utils/buildUrl'
 import { YoutubeManager } from '@/components/youtubeManager'
-import { StartSetting } from '@/components/Modal'
+import { StartSetting } from '@/components/StartSetting'
 
 const Home = () => {
   const webcamStatus = homeStore((s) => s.webcamStatus)
