@@ -1,164 +1,85 @@
-import i18n from 'i18next'
-import { useEffect, useState } from 'react'
-import { useTranslation, Trans } from 'react-i18next'
-
-import homeStore from '@/features/stores/home'
+import { useState, useCallback, useRef } from 'react'
 import settingsStore from '@/features/stores/settings'
-import { IconButton } from './iconButton'
-import { Link } from './link'
-import { isLanguageSupported } from '@/features/constants/settings'
+// ...other imports
 
 export const StartSetting = () => {
-  // homeStoreからshowIntroductionの状態を取得
-  const showIntroduction = homeStore((s) => s.showIntroduction)
-  // settingsStoreからselectLanguageの状態を取得
-  const selectLanguage = settingsStore((s) => s.selectLanguage)
+  // 既存のstateやrefの定義
+  const [userMessage, setUserMessage] = useState('')
+  // モーダル表示状態を管理するstateを追加
+  const [showModal, setShowModal] = useState(true)
+  const keyPressStartTime = useRef<number | null>(null)
+  const isKeyboardTriggered = useRef(false)
+  const isListeningRef = useRef(false)
+  const [isListening, setIsListening] = useState(false)
+  const transcriptRef = useRef('')
+  const audioChunksRef = useRef<Blob[]>([])
+  // recognition を削除し、audioContext, realtimeAPIMode, mediaRecorder などは既存のロジックに従う前提
 
-  // displayIntroductionとopenedの状態を管理するためのuseStateフック
-  const [displayIntroduction, setDisplayIntroduction] = useState(false)
-  const [opened, setOpened] = useState(true)
+  // 例: audioContext, realtimeAPIMode, setMediaRecorder の取得は既存のロジックに従う
 
-  // useTranslationフックを使用して翻訳機能を利用
-  const { t } = useTranslation()
+  const startListening = useCallback(async () => {
+    if (!isListeningRef.current && audioContext) {
+      transcriptRef.current = ''
+      setUserMessage('')
+      // recognition.start() を削除
+      isListeningRef.current = true
+      setIsListening(true)
 
-  // showIntroductionの状態が変更されたときにdisplayIntroductionを更新
-  useEffect(() => {
-    setDisplayIntroduction(homeStore.getState().showIntroduction)
-  }, [showIntroduction])
+      if (realtimeAPIMode) {
+        audioChunksRef.current = [] // 音声チャンクをリセット
 
-  // 言語を更新する関数
-  const updateLanguage = () => {
-    console.log('i18n.language', i18n.language)
+        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+          const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+          setMediaRecorder(recorder)
 
-    let languageCode = i18n.language
-
-    // 言語がサポートされているか確認し、settingsStoreのselectLanguageを更新
-    settingsStore.setState({
-      selectLanguage: isLanguageSupported(languageCode) ? languageCode : 'ja',
-    })
-  }
-
-  return displayIntroduction && opened ? (
-    <div className="absolute z-40 w-full h-full px-24 py-40 bg-black/30 font-M_PLUS_2">
-      <div className="relative mx-auto my-auto max-w-3xl max-h-full p-24 overflow-auto bg-white rounded-16">
-        {/* 閉じるボタン */}
-        <IconButton
-          iconName="24/Close"
-          isProcessing={false}
-          onClick={() => {
-            setOpened(false)
-            updateLanguage()
-          }}
-          className="absolute top-8 right-8 bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled text-white"
-        ></IconButton>
-
-        {/* アプリケーションについてのセクション */}
-        <div className="my-24">
-          <div className="my-8 font-bold typography-20 text-secondary">
-            {t('AboutThisApplication')}
-          </div>
-          <div>
-            <Trans i18nKey="AboutThisApplicationDescription" />
-          </div>
-        </div>
-
-        {/* 技術紹介のセクション */}
-        <div className="my-24">
-          <div className="my-8 font-bold typography-20 text-secondary">
-            {t('TechnologyIntroduction')}
-          </div>
-          <div>
-            <Trans
-              i18nKey="TechnologyIntroductionDescription1"
-              components={{ b: <b /> }}
-            />
-            <Link
-              url={'https://github.com/pixiv/ChatVRM'}
-              label={t('TechnologyIntroductionLink1')}
-            />
-            {t('TechnologyIntroductionDescription2')}
-          </div>
-          <div className="my-16">
-            {t('TechnologyIntroductionDescription3')}
-            <Link
-              url={'https://github.com/pixiv/three-vrm'}
-              label={'@pixiv/three-vrm'}
-            />
-            {t('TechnologyIntroductionDescription4')}
-            <Link
-              url={
-                'https://openai.com/blog/introducing-chatgpt-and-whisper-apis'
+          recorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              if (!isListeningRef.current) {
+                // recognition の停止処理は削除
+                recorder.stop()
+                recorder.ondataavailable = null
+                return
               }
-              label={'OpenAI API'}
-            />
-            {t('TechnologyIntroductionDescription5')}
-            <Link
-              url={
-                'https://developers.rinna.co.jp/product/#product=koeiromap-free'
-              }
-              label={'Koemotion'}
-            />
-            {t('TechnologyIntroductionDescription6')}
-            <Link
-              url={'https://note.com/nike_cha_n/n/ne98acb25e00f'}
-              label={t('TechnologyIntroductionLink2')}
-            />
-            {t('TechnologyIntroductionDescription7')}
-          </div>
-          <div className="my-16">
-            {t('SourceCodeDescription1')}
-            <br />
-            {t('RepositoryURL')}
-            <span> </span>
-            <Link
-              url={'https://github.com/tegnike/aituber-kit'}
-              label={'https://github.com/tegnike/aituber-kit'}
-            />
-          </div>
-          <div className="my-16">{t('SourceCodeDescription2')}</div>
-        </div>
+              audioChunksRef.current.push(event.data)
+              console.log('add audio chunk:', audioChunksRef.current.length)
+            }
+          }
 
-        {/* 次回表示しないチェックボックス */}
-        <div className="my-24">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={showIntroduction}
-              onChange={(e) => {
-                homeStore.setState({
-                  showIntroduction: e.target.checked,
-                })
-                updateLanguage()
-              }}
-              className="mr-8"
-            />
-            <span>{t('DontShowIntroductionNextTime')}</span>
-          </label>
-        </div>
+          recorder.start(100) // より小さな間隔でデータを収集
+        })
+      }
+    }
+  }, [audioContext, realtimeAPIMode])
 
-        {/* 閉じるボタン */}
-        <div className="my-24">
-          <button
-            onClick={() => {
-              setOpened(false)
-              updateLanguage()
-            }}
-            className="font-bold bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled text-white px-24 py-8 rounded-oval"
-          >
-            {t('Close')}
-          </button>
-        </div>
+  const toggleListening = useCallback(() => {
+    keyPressStartTime.current = Date.now()
+    isKeyboardTriggered.current = true
+    startListening()
+  }, [startListening])
 
-        {/* 言語が日本語の場合のメッセージ */}
-        {selectLanguage === 'ja' && (
-          <div className="my-24">
-            <p>
-              You can select the language from the settings. Japanese, English,
-              Traditional Chinese and Korean are available.
-            </p>
+  // 「aaabutton」が押されたらモーダルを閉じて音声入力を開始する処理
+  const handleAAAButtonClick = useCallback(() => {
+    setShowModal(false)
+    startListening()
+  }, [startListening])
+
+  return (
+    <div>
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg p-8 shadow-lg max-w-sm w-full">
+            <h2 className="text-xl font-bold mb-4">音声入力を開始</h2>
+            <p className="mb-4">マイクの許可を確認し、音声入力を開始します。</p>
+            <button
+              onClick={handleAAAButtonClick}
+              className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+            >
+              aaabutton
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+      {/* 他のUIコンポーネント */}
     </div>
-  ) : null
+  )
 }
