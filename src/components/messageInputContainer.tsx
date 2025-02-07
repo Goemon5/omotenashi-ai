@@ -31,29 +31,6 @@ export const MessageInputContainer = ({ onChatProcessStart }: Props) => {
 
   const { t } = useTranslation()
 
-  const checkMicrophonePermission = async (): Promise<boolean> => {
-    // Firefoxの場合はエラーメッセージを表示して終了
-    if (navigator.userAgent.toLowerCase().includes('firefox')) {
-      toastStore.getState().addToast({
-        message: t('Toasts.FirefoxNotSupported'),
-        type: 'error',
-        tag: 'microphone-permission-error-firefox',
-      })
-      return false
-    }
-
-    try {
-      // getUserMediaを直接呼び出し、ブラウザのネイティブ許可モーダルを表示
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      stream.getTracks().forEach((track) => track.stop())
-      return true
-    } catch (error) {
-      // ユーザーが明示的に拒否した場合や、その他のエラーの場合
-      console.error('Microphone permission error:', error)
-      return false
-    }
-  }
-
   const getVoiceLanguageCode = (selectLanguage: string): VoiceLanguage => {
     switch (selectLanguage) {
       case 'ja':
@@ -131,9 +108,6 @@ export const MessageInputContainer = ({ onChatProcessStart }: Props) => {
   }, [])
 
   const startListening = useCallback(async () => {
-    const hasPermission = await checkMicrophonePermission()
-    if (!hasPermission) return
-
     if (recognition && !isListeningRef.current && audioContext) {
       transcriptRef.current = ''
       setUserMessage('')
