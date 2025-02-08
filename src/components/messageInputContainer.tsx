@@ -16,6 +16,9 @@ type Props = {
 }
 
 export const MessageInputContainer = ({ onChatProcessStart }: Props) => {
+  // モーダル表示用の状態を追加
+  const [modalOpen, setModalOpen] = useState(true)
+
   const realtimeAPIMode = settingsStore.getState().realtimeAPIMode
   const [userMessage, setUserMessage] = useState('')
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null)
@@ -59,9 +62,10 @@ export const MessageInputContainer = ({ onChatProcessStart }: Props) => {
       newRecognition.interimResults = true
 
       let noSpeechTimeout: NodeJS.Timeout
+      let silenceTimeout: NodeJS.Timeout // 追加：入力が途絶えたと判断するタイマー
 
-      // 音声認識開始時のハンドラを追加
       newRecognition.onstart = () => {
+        // 初回の無音状態用タイマー（必要ならそのまま利用）
         noSpeechTimeout = setTimeout(() => {
           toastStore.getState().addToast({
             message: t('Toasts.SpeechRecognitionError'),
@@ -72,24 +76,33 @@ export const MessageInputContainer = ({ onChatProcessStart }: Props) => {
         }, NO_SPEECH_TIMEOUT)
       }
 
-      // 音声入力検出時のハンドラを追加
       newRecognition.onspeechstart = () => {
-        clearTimeout(noSpeechTimeout)
-      }
-
-      // 音声認識終了時のハンドラを追加
-      newRecognition.onend = () => {
         clearTimeout(noSpeechTimeout)
       }
 
       newRecognition.onresult = (event) => {
         if (!isListeningRef.current) return
 
+        // 認識結果を取得して連結
         const transcript = Array.from(event.results)
           .map((result) => result[0].transcript)
           .join('')
         transcriptRef.current = transcript
         setUserMessage(transcript)
+
+        // 前回の沈黙タイマーをクリアし、再度タイマーをセット
+        clearTimeout(silenceTimeout)
+        silenceTimeout = setTimeout(() => {
+          // 2秒間新しい音声入力がなかった場合、音声認識を終了（＝送信処理などを実行）
+          stopListening()
+        }, 2000) // 2000ミリ秒（2秒）
+      }
+
+      newRecognition.onend = () => {
+        clearTimeout(noSpeechTimeout)
+        clearTimeout(silenceTimeout)
+        // onend イベントは stopListening() 内での処理で送信などが行われるので、
+        // ここでは特に追加の送信処理は不要
       }
 
       newRecognition.onerror = (event) => {
@@ -235,7 +248,7 @@ export const MessageInputContainer = ({ onChatProcessStart }: Props) => {
       const trimmedTranscriptRef = transcriptRef.current.trim()
       if (isKeyboardTriggered.current) {
         const pressDuration = Date.now() - (keyPressStartTime.current || 0)
-        // 押してから1秒以上 かつ 文字が存在する場合のみ送信
+        // 押してから1秒以上かつ文字が存在する場合のみ送信
         if (pressDuration >= 1000 && trimmedTranscriptRef) {
           onChatProcessStart(trimmedTranscriptRef)
           setUserMessage('')
@@ -302,14 +315,61 @@ export const MessageInputContainer = ({ onChatProcessStart }: Props) => {
     []
   )
 
+  // モーダルの「開始する」ボタンが押された時のハンドラ
+  const handleModalStart = useCallback(async () => {
+    setModalOpen(false)
+    // ブラウザによっては、AudioContextの再開が必要な場合があるのでここでresume()する
+    if (audioContext && audioContext.state === 'suspended') {
+      await audioContext.resume()
+    }
+    startListening()
+  }, [audioContext, startListening])
+
   return (
-    <MessageInput
-      userMessage={userMessage}
-      isMicRecording={isListening} // useState の値を使用
-      onChangeUserMessage={handleInputChange}
-      onClickMicButton={toggleListening}
-      onClickSendButton={handleSendMessage}
-    />
+    <>
+      {modalOpen && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)', // 背景を半透明の黒にする
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000, // 他の要素より前面に表示
+          }}
+        >
+          <div
+            className="modal-content"
+            style={{
+              backgroundColor: '#fff',
+              padding: '20px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.26)',
+              textAlign: 'center', // 中央寄せにする
+            }}
+          >
+            <h2>音声認識を開始しますか？</h2>
+            <button onClick={handleModalStart}>開始する</button>
+          </div>
+        </div>
+      )}
+
+      {/* モーダルが閉じられているときのみ MessageInput を表示 */}
+      {!modalOpen && (
+        <MessageInput
+          userMessage={userMessage}
+          isMicRecording={isListening}
+          onChangeUserMessage={handleInputChange}
+          onClickMicButton={toggleListening}
+          onClickSendButton={handleSendMessage}
+        />
+      )}
+    </>
   )
 }
 
