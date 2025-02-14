@@ -31,7 +31,7 @@ const Home = () => {
   return (
     <div className="h-[100svh] bg-cover" style={{ backgroundImage: bgUrl }}>
       <Meta />
-      <StartSetting />
+
       {modelType === 'vrm' ? <VrmViewer /> : <Live2DViewer />}
       <Form />
 

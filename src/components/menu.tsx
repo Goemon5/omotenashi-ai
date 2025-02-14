@@ -195,6 +195,11 @@ export const Menu = () => {
                         isProcessing={false}
                         onClick={() => imageFileInputRef.current?.click()}
                       />
+                      <IconButton
+                        iconName="24/AddImage"
+                        isProcessing={false}
+                        onClick={() => imageFileInputRef.current?.click()}
+                      />
                       <input
                         type="file"
                         className="hidden"
